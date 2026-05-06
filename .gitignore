@@ -1,1 +1,7 @@
 .venv/
+
+target/
+dbt_packages/
+logs/
+
+data/
