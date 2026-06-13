@@ -1,14 +1,39 @@
 import os
 from datetime import datetime, timedelta
+from pathlib import Path
 
 import pendulum as pdm
-from airflow.providers.standard.operators.bash import BashOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
 from airflow.sdk import dag
+from cosmos import (
+    DbtTaskGroup,
+    ExecutionConfig,
+    ProfileConfig,
+    ProjectConfig,
+    RenderConfig,
+)
+from cosmos.constants import LoadMode
 
 from include.config.tags import CRITICAL, Dest, Domain, PipelineType, Schedule, Source
 
-DBT_PROJECT_DIR = os.environ.get("DBT_PROJECT_DIR", "/usr/local/airflow/ecomerce")
+DBT_PROJECT_DIR = Path(os.environ.get("DBT_PROJECT_DIR", "/usr/local/airflow/ecomerce"))
 DBT_TARGET = os.environ.get("DBT_TARGET", "dev")
+DBT_EXECUTABLE_PATH = os.environ.get("DBT_EXECUTABLE_PATH", "dbt")
+
+profile_config = ProfileConfig(
+    profile_name="ecomerce",
+    target_name=DBT_TARGET,
+    profiles_yml_filepath=DBT_PROJECT_DIR / "profiles.yml",
+)
+
+project_config = ProjectConfig(dbt_project_path=DBT_PROJECT_DIR)
+
+execution_config = ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE_PATH)
+
+render_config = RenderConfig(
+    load_method=LoadMode.DBT_LS,
+    dbt_executable_path=DBT_EXECUTABLE_PATH,
+)
 
 
 @dag(
@@ -24,19 +49,22 @@ DBT_TARGET = os.environ.get("DBT_TARGET", "dev")
         "execution_timeout": timedelta(hours=1),
     },
     tags=[Source.OLIST, Dest.LOCAL, Domain.ORDERS, PipelineType.DBT, Schedule.DAILY, CRITICAL],
-    description="Transform Olist Parquet into staging/intermediate/marts with dbt.",
+    description="Transform Olist Parquet into staging/intermediate/marts with dbt via Cosmos.",
 )
 def olist_orders_transform():
-    dbt_run = BashOperator(
-        task_id="dbt_run",
-        bash_command=f"cd {DBT_PROJECT_DIR} && dbt run --profiles-dir . --target {DBT_TARGET}",
-    )
-    dbt_test = BashOperator(
-        task_id="dbt_test",
-        bash_command=f"cd {DBT_PROJECT_DIR} && dbt test --profiles-dir . --target {DBT_TARGET}",
+    start = EmptyOperator(task_id="start")
+
+    transform = DbtTaskGroup(
+        group_id="dbt_transform",
+        project_config=project_config,
+        profile_config=profile_config,
+        execution_config=execution_config,
+        render_config=render_config,
     )
 
-    dbt_run >> dbt_test
+    end = EmptyOperator(task_id="end")
+
+    start >> transform >> end
 
 
 olist_orders_transform()
