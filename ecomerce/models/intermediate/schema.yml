@@ -1,0 +1,17 @@
+version: 2
+
+models:
+  - name: int_order_payments
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+
+  - name: int_order_items
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+
+  - name: int_order_reviews
+    columns:
+      - name: order_id
+        tests: [unique, not_null]

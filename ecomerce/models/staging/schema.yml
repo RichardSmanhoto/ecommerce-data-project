@@ -1,0 +1,48 @@
+version: 2
+
+models:
+  - name: stg_olist__orders
+    columns:
+      - name: order_id
+        tests: [unique, not_null]
+      - name: customer_id
+        tests: [not_null]
+
+  - name: stg_olist__order_items
+    columns:
+      - name: order_id
+        tests: [not_null]
+      - name: product_id
+        tests: [not_null]
+
+  - name: stg_olist__order_payments
+    columns:
+      - name: order_id
+        tests: [not_null]
+
+  - name: stg_olist__order_reviews
+    columns:
+      - name: review_id
+        tests: [not_null]
+      - name: order_id
+        tests: [not_null]
+
+  - name: stg_olist__customers
+    columns:
+      - name: customer_id
+        tests: [unique, not_null]
+
+  - name: stg_olist__products
+    columns:
+      - name: product_id
+        tests: [unique, not_null]
+
+  - name: stg_olist__sellers
+    columns:
+      - name: seller_id
+        tests: [unique, not_null]
+
+  - name: stg_olist__product_category_translation
+    columns:
+      - name: product_category_name
+        tests: [unique, not_null]
