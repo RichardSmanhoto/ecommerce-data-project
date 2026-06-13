@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ELT pipeline for the Olist Brazilian e-commerce dataset. Raw CSV files in `/data/` are loaded and transformed using Airflow (orchestration) + dbt (transformation) + DuckDB (warehouse).
+ELT pipeline for the Olist Brazilian e-commerce dataset. Raw CSVs in `/data/` are ingested to local Parquet (`data/parquet/`), then transformed with dbt. Orchestrated by Airflow (Astronomer). The warehouse is DuckDB locally (`dbt-duckdb`); BigQuery is the planned target (`include/loader/bigquery_loader.py` is ready to enable once GCP credentials exist). Final layer feeds Looker Studio / Power BI dashboards.
 
 ## Commands
 
@@ -55,10 +55,22 @@ dbt docs generate && dbt docs serve
 
 ```
 /data/*.csv (raw Olist CSVs)
-  → Airflow DAG: olist_orders_elt        (dags/olist_orders_load.py)     [load]
-  → Airflow DAG: olist_orders_transform  (dags/olist_orders_transform.py) [trigger dbt]
-  → dbt models in ecomerce/models/       (DuckDB: dev.duckdb / prod.duckdb)
+  → include/ ingestion (CSV→Parquet, all-string raw)        data/parquet/*.parquet
+  → Airflow DAG: olist__orders__ingest__daily    (dags/olist__orders__ingest__daily.py)
+  → Airflow DAG: olist__orders__transform__daily (dags/olist__orders__transform__daily.py) [runs dbt]
+  → dbt models in ecomerce/models/               (DuckDB: dev.duckdb; BigQuery later)
 ```
+
+### Ingestion modules (`include/`)
+
+Mirrors the `data-ingestion-service` reference layout:
+
+- `include/config/` — `datasets.py` (table→CSV map, paths), `tags.py` (DAG tag constants).
+- `include/extractor/olist_extractor.py` — reads a CSV as strings and adds lineage columns.
+- `include/loader/parquet_loader.py` — DataFrame → local Parquet (snappy); `bigquery_loader.py` — lazy-imported BigQuery load, enabled later.
+- `include/pipeline/olist_ingestion.py` — `ingest_dataset()` / `ingest_all()`; runnable via `uv run python -m include.pipeline.olist_ingestion`.
+
+dbt sources read the Parquet directly via `external_location` (`ecomerce/models/staging/source.yml`).
 
 ### dbt Model Layers
 
@@ -77,8 +89,10 @@ Defined in `ecomerce/profiles.yml`. Profile name: `ecomerce`.
 
 ### Airflow DAGs
 
-- `olist_orders_elt` — daily schedule, loads raw data (owner: Rick)
-- `olist_orders_transform` — depends on `olist_orders_elt`, triggers dbt transformations
+DAG naming convention: `<source>__<domain>__<dest>__<schedule>.py`.
+
+- `olist__orders__ingest__daily` — daily; ingests every Olist CSV to Parquet (dynamic task mapping), then triggers the transform DAG (owner: Rick).
+- `olist__orders__transform__daily` — triggered by the ingest DAG; runs `dbt run` then `dbt test` via `BashOperator` (paths from `DBT_PROJECT_DIR` / `DBT_TARGET` env vars).
 
 DAG integrity tests are in `tests/dags/`. All DAGs must have ≥2 retries and valid tags.
 
@@ -92,5 +106,6 @@ DAG integrity tests are in `tests/dags/`. All DAGs must have ≥2 retries and va
 ## Important Notes
 
 - The dbt project folder is named `ecomerce` (one "m") — intentional naming.
-- Raw dataset CSVs are committed to the repo under `/data/` (largest: `olist_geolocation_dataset.csv` ~61 MB).
+- `/data/` (CSVs and generated `data/parquet/`) is gitignored; `.env` is gitignored, use `.env.example` as the template.
 - `requirements.txt` is legacy; dependency source of truth is `pyproject.toml` + `uv.lock`.
+- Code style: clear English names, minimal comments, ruff line-length 120.
