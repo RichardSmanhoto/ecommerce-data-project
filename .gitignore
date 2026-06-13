@@ -1,4 +1,7 @@
 .venv/
+.ruff_cache/
+__pycache__/
+.ipynb_checkpoints/
 
 target/
 dbt_packages/
@@ -9,3 +12,9 @@ data/
 *.duckdb
 *.duckdb.wal
 *.db
+
+.env
+.env.local
+
+.claude/
+ecomerce/.user.yml
