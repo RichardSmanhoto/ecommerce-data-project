@@ -1,0 +1,112 @@
+version: 2
+
+models:
+  - name: fct_orders
+    description: "One row per order enriched with customer, items, payments and review."
+    columns:
+      - name: order_id
+        description: "Order identifier."
+        tests: [unique, not_null]
+      - name: customer_id
+        description: "Per-order customer key."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customers')
+                field: customer_id
+      - name: customer_unique_id
+        description: "Stable identifier of the person; use it to count distinct or repeat customers."
+      - name: customer_state
+        description: "Customer state (UF)."
+      - name: customer_city
+        description: "Customer city."
+      - name: order_status
+        description: "Order lifecycle status."
+      - name: purchased_at
+        description: "When the order was placed."
+      - name: approved_at
+        description: "When the payment was approved."
+      - name: delivered_to_customer_at
+        description: "Actual delivery date; null for undelivered orders."
+      - name: estimated_delivery_at
+        description: "Delivery date promised at purchase."
+      - name: delivery_days
+        description: "Days from purchase to delivery."
+      - name: delivery_delay_days
+        description: "Days delivered after the estimate (negative means early)."
+      - name: item_count
+        description: "Number of order lines."
+      - name: distinct_product_count
+        description: "Distinct products in the order."
+      - name: distinct_seller_count
+        description: "Distinct sellers in the order."
+      - name: total_item_price
+        description: "Sum of item prices in BRL, excluding freight."
+      - name: total_freight_value
+        description: "Sum of freight in BRL."
+      - name: total_payment_value
+        description: "Sum of all payments in BRL."
+      - name: payment_count
+        description: "Number of payment records."
+      - name: max_installments
+        description: "Highest installment count among the payments."
+      - name: payment_types
+        description: "Comma-separated distinct payment methods."
+      - name: review_score
+        description: "Score (1-5) of the most recent review."
+
+  - name: dim_customers
+    description: "One row per customer_id with location."
+    columns:
+      - name: customer_id
+        description: "Per-order customer key."
+        tests: [unique, not_null]
+      - name: customer_unique_id
+        description: "Stable identifier of the person."
+      - name: customer_zip_code_prefix
+        description: "First 5 digits of the CEP."
+      - name: customer_city
+        description: "City."
+      - name: customer_state
+        description: "State (UF)."
+      - name: customer_latitude
+        description: "Latitude of the zip prefix; null when the prefix is missing from geolocation."
+      - name: customer_longitude
+        description: "Longitude of the zip prefix; null when the prefix is missing from geolocation."
+
+  - name: dim_products
+    description: "One row per product with the English category."
+    columns:
+      - name: product_id
+        description: "Product identifier."
+        tests: [unique, not_null]
+      - name: product_category_name
+        description: "Category in Portuguese."
+      - name: product_category
+        description: "Category in English; null when no translation exists."
+      - name: product_weight_g
+        description: "Weight in grams."
+      - name: product_length_cm
+        description: "Length in cm."
+      - name: product_height_cm
+        description: "Height in cm."
+      - name: product_width_cm
+        description: "Width in cm."
+
+  - name: dim_sellers
+    description: "One row per seller with location."
+    columns:
+      - name: seller_id
+        description: "Seller identifier."
+        tests: [unique, not_null]
+      - name: seller_zip_code_prefix
+        description: "First 5 digits of the CEP."
+      - name: seller_city
+        description: "City."
+      - name: seller_state
+        description: "State (UF)."
+      - name: seller_latitude
+        description: "Latitude of the zip prefix; null when the prefix is missing from geolocation."
+      - name: seller_longitude
+        description: "Longitude of the zip prefix; null when the prefix is missing from geolocation."

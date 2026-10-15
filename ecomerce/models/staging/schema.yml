@@ -1,0 +1,208 @@
+version: 2
+
+models:
+  - name: stg_olist__orders
+    description: "One row per order with typed lifecycle timestamps."
+    columns:
+      - name: order_id
+        description: "Order identifier."
+        tests: [unique, not_null]
+      - name: customer_id
+        description: "Per-order customer key."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__customers')
+                field: customer_id
+      - name: order_status
+        description: "created, approved, invoiced, processing, shipped, delivered, canceled or unavailable."
+        tests:
+          - accepted_values:
+              arguments:
+                values: [created, approved, invoiced, processing, shipped, delivered, canceled, unavailable]
+      - name: purchased_at
+        description: "When the customer placed the order."
+      - name: approved_at
+        description: "When the payment was approved."
+      - name: delivered_to_carrier_at
+        description: "When the order was handed to the carrier."
+      - name: delivered_to_customer_at
+        description: "When the order was delivered to the customer."
+      - name: estimated_delivery_at
+        description: "Delivery date promised at purchase."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__order_items
+    description: "One row per order line (order_id + order_item_number)."
+    columns:
+      - name: order_id
+        description: "Order the line belongs to."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__orders')
+                field: order_id
+      - name: order_item_number
+        description: "Line number inside the order (1..n)."
+      - name: product_id
+        description: "Product sold on the line."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__products')
+                field: product_id
+      - name: seller_id
+        description: "Seller fulfilling the line."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__sellers')
+                field: seller_id
+      - name: shipping_limit_at
+        description: "Deadline for the seller to hand the item to the carrier."
+      - name: price
+        description: "Item price in BRL."
+      - name: freight_value
+        description: "Freight for the item in BRL."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__order_payments
+    description: "One row per payment (order_id + payment_sequential)."
+    columns:
+      - name: order_id
+        description: "Order being paid."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__orders')
+                field: order_id
+      - name: payment_sequential
+        description: "Sequence when an order uses several payments."
+      - name: payment_type
+        description: "credit_card, boleto, voucher, debit_card or not_defined."
+      - name: payment_installments
+        description: "Number of installments."
+      - name: payment_value
+        description: "Amount paid in BRL."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__order_reviews
+    description: "Customer satisfaction surveys. review_id is not unique in the source."
+    columns:
+      - name: review_id
+        description: "Review identifier."
+        tests: [not_null]
+      - name: order_id
+        description: "Reviewed order."
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_olist__orders')
+                field: order_id
+      - name: review_score
+        description: "Score from 1 to 5."
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5]
+                quote: false
+      - name: review_comment_title
+        description: "Optional comment title."
+      - name: review_comment_message
+        description: "Optional comment text."
+      - name: review_created_at
+        description: "When the survey was sent."
+      - name: review_answered_at
+        description: "When the customer answered."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__customers
+    description: "One row per customer_id (a new id is generated for every order)."
+    columns:
+      - name: customer_id
+        description: "Per-order customer key."
+        tests: [unique, not_null]
+      - name: customer_unique_id
+        description: "Stable identifier of the person."
+      - name: customer_zip_code_prefix
+        description: "First 5 digits of the CEP, kept as text."
+      - name: customer_city
+        description: "City."
+      - name: customer_state
+        description: "State (UF)."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__products
+    description: "One row per product with physical attributes."
+    columns:
+      - name: product_id
+        description: "Product identifier."
+        tests: [unique, not_null]
+      - name: product_category_name
+        description: "Category in Portuguese."
+      - name: product_weight_g
+        description: "Weight in grams."
+      - name: product_length_cm
+        description: "Length in cm."
+      - name: product_height_cm
+        description: "Height in cm."
+      - name: product_width_cm
+        description: "Width in cm."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__sellers
+    description: "One row per seller."
+    columns:
+      - name: seller_id
+        description: "Seller identifier."
+        tests: [unique, not_null]
+      - name: seller_zip_code_prefix
+        description: "First 5 digits of the CEP, kept as text."
+      - name: seller_city
+        description: "City."
+      - name: seller_state
+        description: "State (UF)."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__product_category_translation
+    description: "Portuguese to English product category names."
+    columns:
+      - name: product_category_name
+        description: "Category in Portuguese."
+        tests: [unique, not_null]
+      - name: product_category
+        description: "Category in English."
+      - name: ingested_at
+        description: "When the raw row was ingested."
+
+  - name: stg_olist__geolocation
+    description: "One row per zip code prefix; coordinates averaged over all raw points of the prefix."
+    columns:
+      - name: zip_code_prefix
+        description: "First 5 digits of the CEP."
+        tests: [unique, not_null]
+      - name: latitude
+        description: "Average latitude of the prefix."
+      - name: longitude
+        description: "Average longitude of the prefix."
+      - name: city
+        description: "Most frequent city name for the prefix."
+      - name: state
+        description: "Most frequent state for the prefix."
+      - name: source_point_count
+        description: "Number of raw points averaged."
+      - name: ingested_at
+        description: "When the raw rows were ingested."

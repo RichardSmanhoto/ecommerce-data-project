@@ -1,0 +1,58 @@
+---
+title: Marts star schema
+---
+erDiagram
+    DIM_CUSTOMERS ||--o{ FCT_ORDERS : "customer_id"
+    DIM_PRODUCTS }o..o{ FCT_ORDERS : "via stg_order_items (no direct key)"
+    DIM_SELLERS }o..o{ FCT_ORDERS : "via stg_order_items (no direct key)"
+
+    FCT_ORDERS {
+        varchar order_id PK
+        varchar customer_id FK
+        varchar customer_unique_id
+        varchar customer_state
+        varchar customer_city
+        varchar order_status
+        timestamp purchased_at
+        timestamp approved_at
+        timestamp delivered_to_customer_at
+        timestamp estimated_delivery_at
+        bigint delivery_days
+        bigint delivery_delay_days
+        bigint item_count
+        bigint distinct_product_count
+        bigint distinct_seller_count
+        double total_item_price
+        double total_freight_value
+        double total_payment_value
+        bigint payment_count
+        integer max_installments
+        varchar payment_types
+        integer review_score
+    }
+    DIM_CUSTOMERS {
+        varchar customer_id PK
+        varchar customer_unique_id
+        varchar customer_zip_code_prefix
+        varchar customer_city
+        varchar customer_state
+        double customer_latitude
+        double customer_longitude
+    }
+    DIM_SELLERS {
+        varchar seller_id PK
+        varchar seller_zip_code_prefix
+        varchar seller_city
+        varchar seller_state
+        double seller_latitude
+        double seller_longitude
+    }
+    DIM_PRODUCTS {
+        varchar product_id PK
+        varchar product_category_name
+        varchar product_category
+        integer product_weight_g
+        integer product_length_cm
+        integer product_height_cm
+        integer product_width_cm
+    }

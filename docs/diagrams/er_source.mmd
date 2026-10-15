@@ -1,0 +1,82 @@
+---
+title: Olist source model (staging layer)
+---
+erDiagram
+    STG_CUSTOMERS ||--o{ STG_ORDERS : places
+    STG_ORDERS ||--o{ STG_ORDER_ITEMS : contains
+    STG_ORDERS ||--|{ STG_ORDER_PAYMENTS : "paid by"
+    STG_ORDERS ||--o{ STG_ORDER_REVIEWS : "reviewed in"
+    STG_PRODUCTS ||--o{ STG_ORDER_ITEMS : "sold as"
+    STG_SELLERS ||--o{ STG_ORDER_ITEMS : "fulfilled by"
+    STG_PRODUCT_CATEGORY_TRANSLATION |o--o{ STG_PRODUCTS : translates
+    STG_GEOLOCATION |o..o{ STG_CUSTOMERS : "zip prefix"
+    STG_GEOLOCATION |o..o{ STG_SELLERS : "zip prefix"
+
+    STG_CUSTOMERS {
+        varchar customer_id PK
+        varchar customer_unique_id
+        varchar customer_zip_code_prefix
+        varchar customer_city
+        varchar customer_state
+    }
+    STG_ORDERS {
+        varchar order_id PK
+        varchar customer_id FK
+        varchar order_status
+        timestamp purchased_at
+        timestamp approved_at
+        timestamp delivered_to_carrier_at
+        timestamp delivered_to_customer_at
+        timestamp estimated_delivery_at
+    }
+    STG_ORDER_ITEMS {
+        varchar order_id PK,FK
+        integer order_item_number PK
+        varchar product_id FK
+        varchar seller_id FK
+        timestamp shipping_limit_at
+        double price
+        double freight_value
+    }
+    STG_ORDER_PAYMENTS {
+        varchar order_id PK,FK
+        integer payment_sequential PK
+        varchar payment_type
+        integer payment_installments
+        double payment_value
+    }
+    STG_ORDER_REVIEWS {
+        varchar review_id
+        varchar order_id FK
+        integer review_score
+        varchar review_comment_title
+        varchar review_comment_message
+        timestamp review_created_at
+        timestamp review_answered_at
+    }
+    STG_PRODUCTS {
+        varchar product_id PK
+        varchar product_category_name FK
+        integer product_weight_g
+        integer product_length_cm
+        integer product_height_cm
+        integer product_width_cm
+    }
+    STG_SELLERS {
+        varchar seller_id PK
+        varchar seller_zip_code_prefix
+        varchar seller_city
+        varchar seller_state
+    }
+    STG_PRODUCT_CATEGORY_TRANSLATION {
+        varchar product_category_name PK
+        varchar product_category
+    }
+    STG_GEOLOCATION {
+        varchar zip_code_prefix PK
+        double latitude
+        double longitude
+        varchar city
+        varchar state
+        bigint source_point_count
+    }
