@@ -5,5 +5,5 @@ with source as (
 select
     product_category_name,
     product_category_name_english as product_category,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

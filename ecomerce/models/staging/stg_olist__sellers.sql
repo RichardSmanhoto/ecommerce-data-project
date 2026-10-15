@@ -7,5 +7,5 @@ select
     seller_zip_code_prefix,
     seller_city,
     seller_state,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

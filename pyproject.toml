@@ -1,20 +1,32 @@
 [project]
 name = "ecommerce-data-project"
 version = "0.1.0"
-description = "Add your description here"
+description = "ELT pipeline for the Olist Brazilian e-commerce dataset: CSV to Parquet ingestion, dbt on DuckDB, orchestrated by Airflow + Cosmos."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "apache-airflow==3.2.1",
-    "astronomer-cosmos>=1.14.2",
-    "dbt-duckdb>=1.10.1",
-    "duckdb>=1.5.2",
-    "pandas>=3.0.2",
-    "pendulum>=3.2.0",
-    "pyarrow>=21.0.0",
+    # Airflow and Cosmos only run on Linux (Astro Docker image or WSL); openlineage-sql has no Windows wheel.
+    "apache-airflow==3.3.2; sys_platform != 'win32'",
+    "astronomer-cosmos>=1.15.1; sys_platform != 'win32'",
+    "dbt-duckdb>=1.11.0",
+    "duckdb>=1.5.6",
+    "pandas>=3.0.6",
+    "pendulum>=3.3.0",
+    "pyarrow>=26.0.0",
 ]
 
 [dependency-groups]
 dev = [
     "jupyter>=1.1.1",
+    "pytest>=8.4.0",
+    "ruff>=0.14.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+extend-exclude = [".astro"]

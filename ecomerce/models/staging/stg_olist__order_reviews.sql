@@ -10,5 +10,5 @@ select
     review_comment_message,
     try_cast(review_creation_date as timestamp)    as review_created_at,
     try_cast(review_answer_timestamp as timestamp) as review_answered_at,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

@@ -4,7 +4,7 @@ sources:
   - name: olist_raw
     description: "Raw Olist datasets ingested as local Parquet files."
     meta:
-      external_location: "../data/parquet/{name}.parquet"
+      external_location: "{{ env_var('OLIST_PARQUET_DIR', '../data/parquet') }}/{name}.parquet"
     tables:
       - name: orders
       - name: order_items

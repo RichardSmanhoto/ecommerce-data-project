@@ -1,8 +1,9 @@
+import os
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "data"
-PARQUET_DIR = DATA_DIR / "parquet"
+PARQUET_DIR = Path(os.environ.get("OLIST_PARQUET_DIR", DATA_DIR / "parquet")).resolve()
 
 # Logical table name -> raw Olist CSV file name.
 OLIST_DATASETS: dict[str, str] = {

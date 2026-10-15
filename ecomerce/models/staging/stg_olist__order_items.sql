@@ -10,5 +10,5 @@ select
     try_cast(shipping_limit_date as timestamp) as shipping_limit_at,
     cast(price as double)                      as price,
     cast(freight_value as double)              as freight_value,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

@@ -8,5 +8,5 @@ select
     payment_type,
     cast(payment_installments as integer) as payment_installments,
     cast(payment_value as double)         as payment_value,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

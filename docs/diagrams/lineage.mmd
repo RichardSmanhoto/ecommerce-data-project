@@ -1,0 +1,71 @@
+---
+title: dbt lineage (source → staging → intermediate → marts)
+---
+flowchart LR
+    classDef raw fill:#eef2f7,stroke:#64748b,color:#0f172a
+    classDef stg fill:#dbeafe,stroke:#2563eb,color:#0f172a
+    classDef int fill:#fef3c7,stroke:#d97706,color:#0f172a
+    classDef mart fill:#dcfce7,stroke:#16a34a,color:#0f172a
+
+    subgraph RAW["Parquet (olist_raw)"]
+        r_orders[orders]:::raw
+        r_items[order_items]:::raw
+        r_pay[order_payments]:::raw
+        r_rev[order_reviews]:::raw
+        r_cust[customers]:::raw
+        r_prod[products]:::raw
+        r_sell[sellers]:::raw
+        r_tr[product_category_translation]:::raw
+        r_geo[geolocation]:::raw
+    end
+
+    subgraph STG["Staging (table)"]
+        s_orders[stg_olist__orders]:::stg
+        s_items[stg_olist__order_items]:::stg
+        s_pay[stg_olist__order_payments]:::stg
+        s_rev[stg_olist__order_reviews]:::stg
+        s_cust[stg_olist__customers]:::stg
+        s_prod[stg_olist__products]:::stg
+        s_sell[stg_olist__sellers]:::stg
+        s_geo[stg_olist__geolocation]:::stg
+        s_tr[stg_olist__product_category_translation]:::stg
+    end
+
+    subgraph INT["Intermediate (ephemeral)"]
+        i_items[int_order_items]:::int
+        i_pay[int_order_payments]:::int
+        i_rev[int_order_reviews]:::int
+    end
+
+    subgraph MART["Marts (table)"]
+        fct[fct_orders]:::mart
+        dcust[dim_customers]:::mart
+        dprod[dim_products]:::mart
+        dsell[dim_sellers]:::mart
+    end
+
+    r_orders --> s_orders
+    r_items --> s_items
+    r_pay --> s_pay
+    r_rev --> s_rev
+    r_cust --> s_cust
+    r_prod --> s_prod
+    r_sell --> s_sell
+    r_tr --> s_tr
+    r_geo --> s_geo
+
+    s_items --> i_items
+    s_pay --> i_pay
+    s_rev --> i_rev
+
+    s_orders --> fct
+    s_cust --> fct
+    i_items --> fct
+    i_pay --> fct
+    i_rev --> fct
+    s_cust --> dcust
+    s_prod --> dprod
+    s_tr --> dprod
+    s_geo --> dcust
+    s_sell --> dsell
+    s_geo --> dsell

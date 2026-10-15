@@ -11,5 +11,5 @@ select
     try_cast(order_delivered_carrier_date as timestamp)  as delivered_to_carrier_at,
     try_cast(order_delivered_customer_date as timestamp) as delivered_to_customer_at,
     try_cast(order_estimated_delivery_date as timestamp) as estimated_delivery_at,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

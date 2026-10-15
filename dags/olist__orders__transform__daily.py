@@ -30,10 +30,7 @@ project_config = ProjectConfig(dbt_project_path=DBT_PROJECT_DIR)
 
 execution_config = ExecutionConfig(dbt_executable_path=DBT_EXECUTABLE_PATH)
 
-render_config = RenderConfig(
-    load_method=LoadMode.DBT_LS,
-    dbt_executable_path=DBT_EXECUTABLE_PATH,
-)
+render_config = RenderConfig(load_method=LoadMode.DBT_LS)
 
 
 @dag(

@@ -2,12 +2,12 @@ ecomerce:
   outputs:
     dev:
       type: duckdb
-      path: dev.duckdb
+      path: "{{ env_var('DUCKDB_DIR', '.') }}/dev.duckdb"
       threads: 1
 
     prod:
       type: duckdb
-      path: prod.duckdb
+      path: "{{ env_var('DUCKDB_DIR', '.') }}/prod.duckdb"
       threads: 4
 
   target: dev

@@ -14,9 +14,12 @@ ELT pipeline for the Olist Brazilian e-commerce dataset. Raw CSVs in `/data/` ar
 # Install dependencies (uses uv, not pip)
 uv sync
 
-# Run tests
-uv run pytest tests/
+# Run tests and lint
+uv run pytest
+uv run ruff check .
 ```
+
+Airflow and Cosmos are Linux-only dependencies (`sys_platform != 'win32'`): on native Windows `uv sync` skips them and the DAG tests are skipped. Use WSL or `astro dev pytest` to run the DAG tests.
 
 ### Airflow (via Astronomer CLI)
 
@@ -92,13 +95,13 @@ Defined in `ecomerce/profiles.yml`. Profile name: `ecomerce`.
 DAG naming convention: `<source>__<domain>__<dest>__<schedule>.py`.
 
 - `olist__orders__ingest__daily` — daily; ingests every Olist CSV to Parquet (dynamic task mapping), then triggers the transform DAG (owner: Rick).
-- `olist__orders__transform__daily` — triggered by the ingest DAG; runs `dbt run` then `dbt test` via `BashOperator` (paths from `DBT_PROJECT_DIR` / `DBT_TARGET` env vars).
+- `olist__orders__transform__daily` — triggered by the ingest DAG; renders every dbt model as Airflow tasks with Astronomer Cosmos (`DbtTaskGroup`, paths from `DBT_PROJECT_DIR` / `DBT_TARGET` env vars).
 
 DAG integrity tests are in `tests/dags/`. All DAGs must have ≥2 retries and valid tags.
 
 ### Key Technology Choices
 
-- **Orchestration:** Apache Airflow 3.2.1 on Astronomer (Astro runtime 3.2-3)
+- **Orchestration:** Apache Airflow 3.3.2 on Astronomer (Astro runtime 3.3-9, Python 3.13)
 - **Warehouse:** DuckDB (local file, via `dbt-duckdb`)
 - **Package manager:** `uv` (not pip) — always use `uv run` or `uv sync`
 - **Python:** 3.13
@@ -107,5 +110,7 @@ DAG integrity tests are in `tests/dags/`. All DAGs must have ≥2 retries and va
 
 - The dbt project folder is named `ecomerce` (one "m") — intentional naming.
 - `/data/` (CSVs and generated `data/parquet/`) is gitignored; `.env` is gitignored, use `.env.example` as the template.
-- `requirements.txt` is legacy; dependency source of truth is `pyproject.toml` + `uv.lock`.
+- dbt ≥ 1.12 auto-loads `.env`, so container paths (`DBT_PROJECT_DIR`, `DBT_PROFILES_DIR`, `DUCKDB_DIR`, `OLIST_PARQUET_DIR`) are set in the `Dockerfile`, never in `.env`.
+- Data model docs: `docs/data_dictionary.md`, diagrams in `docs/diagrams/*.mmd` rendered to `docs/img/`. Update both when models change.
+- `requirements.txt` is what the Astro image installs; keep it in sync with `pyproject.toml` (source of truth, with `uv.lock`).
 - Code style: clear English names, minimal comments, ruff line-length 120.

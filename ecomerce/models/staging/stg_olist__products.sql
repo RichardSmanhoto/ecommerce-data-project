@@ -9,5 +9,5 @@ select
     try_cast(product_length_cm as integer) as product_length_cm,
     try_cast(product_height_cm as integer) as product_height_cm,
     try_cast(product_width_cm as integer)  as product_width_cm,
-    ingested_at
+    cast(ingested_at as timestamp with time zone) as ingested_at
 from source

@@ -1,3 +1,8 @@
-dbt-duckdb>=1.10.1
-pandas>=3.0.2
-pendulum>=3.2.0
+# Installed into the Astro runtime image (Airflow itself comes from the image).
+# Keep in sync with pyproject.toml.
+astronomer-cosmos>=1.15.1
+dbt-duckdb>=1.11.0
+duckdb>=1.5.6
+pandas>=3.0.6
+pendulum>=3.3.0
+pyarrow>=26.0.0

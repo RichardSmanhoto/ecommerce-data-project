@@ -5,9 +5,9 @@
 **An end-to-end ELT pipeline for the Olist Brazilian e-commerce dataset — from raw CSVs to dashboard-ready marts.**
 
 [![Python](https://img.shields.io/badge/Python-3.13-3776AB?logo=python&logoColor=white)](https://www.python.org/)
-[![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-3.2.1-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
-[![Astronomer Cosmos](https://img.shields.io/badge/Astronomer%20Cosmos-1.14-7A4FBF?logo=astronomer&logoColor=white)](https://astronomer.github.io/astronomer-cosmos/)
-[![dbt](https://img.shields.io/badge/dbt-1.11-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
+[![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-3.3.2-017CEE?logo=apacheairflow&logoColor=white)](https://airflow.apache.org/)
+[![Astronomer Cosmos](https://img.shields.io/badge/Astronomer%20Cosmos-1.15-7A4FBF?logo=astronomer&logoColor=white)](https://astronomer.github.io/astronomer-cosmos/)
+[![dbt](https://img.shields.io/badge/dbt-1.12-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-local-FFF000?logo=duckdb&logoColor=black)](https://duckdb.org/)
 [![BigQuery](https://img.shields.io/badge/BigQuery-planned-669DF6?logo=googlebigquery&logoColor=white)](https://cloud.google.com/bigquery)
 [![uv](https://img.shields.io/badge/uv-package%20manager-DE5FE9?logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
@@ -51,134 +51,36 @@ flowchart LR
 
 ## 🧩 Data Model
 
-The Olist source model is built around `orders`, linking customers, items, payments and reviews. Sellers and products attach through the order items, and `geolocation` enriches both customers and sellers by zip-code prefix.
+The Olist source model is built around `orders`, linking customers, items, payments and reviews. Sellers and products attach through the order items, and `geolocation` (collapsed to one row per zip prefix) locates customers and sellers.
 
-```mermaid
-erDiagram
-    CUSTOMERS ||--o{ ORDERS : places
-    ORDERS ||--o{ ORDER_ITEMS : contains
-    ORDERS ||--o{ ORDER_PAYMENTS : "paid by"
-    ORDERS ||--o{ ORDER_REVIEWS : "reviewed in"
-    PRODUCTS ||--o{ ORDER_ITEMS : "sold as"
-    SELLERS ||--o{ ORDER_ITEMS : "fulfilled by"
-    PRODUCT_CATEGORY_TRANSLATION ||--o{ PRODUCTS : translates
-    CUSTOMERS }o--o{ GEOLOCATION : "located by zip"
-    SELLERS }o--o{ GEOLOCATION : "located by zip"
+![Olist source model](docs/img/er_source.png)
 
-    CUSTOMERS {
-        string customer_id PK
-        string customer_unique_id
-        string customer_zip_code_prefix FK
-        string customer_city
-        string customer_state
-    }
-    ORDERS {
-        string order_id PK
-        string customer_id FK
-        string order_status
-        timestamp purchased_at
-        timestamp approved_at
-        timestamp delivered_to_customer_at
-        timestamp estimated_delivery_at
-    }
-    ORDER_ITEMS {
-        string order_id FK
-        int order_item_number
-        string product_id FK
-        string seller_id FK
-        timestamp shipping_limit_at
-        double price
-        double freight_value
-    }
-    ORDER_PAYMENTS {
-        string order_id FK
-        int payment_sequential
-        string payment_type
-        int payment_installments
-        double payment_value
-    }
-    ORDER_REVIEWS {
-        string review_id PK
-        string order_id FK
-        int review_score
-        string review_comment_title
-        string review_comment_message
-        timestamp review_created_at
-        timestamp review_answered_at
-    }
-    PRODUCTS {
-        string product_id PK
-        string product_category_name FK
-        int product_weight_g
-        int product_length_cm
-        int product_height_cm
-        int product_width_cm
-    }
-    SELLERS {
-        string seller_id PK
-        string seller_zip_code_prefix FK
-        string seller_city
-        string seller_state
-    }
-    PRODUCT_CATEGORY_TRANSLATION {
-        string product_category_name PK
-        string product_category
-    }
-    GEOLOCATION {
-        string geolocation_zip_code_prefix
-        double geolocation_lat
-        double geolocation_lng
-        string geolocation_city
-        string geolocation_state
-    }
-```
+The marts form a star schema: the fact `fct_orders` (one row per order) with `dim_customers`, `dim_products` and `dim_sellers`.
 
-Downstream, the marts collapse this into a star schema: the core fact `fct_orders` (one row per order) surrounded by `dim_customers` and `dim_products`.
+![Marts star schema](docs/img/er_marts.png)
 
-```mermaid
-erDiagram
-    DIM_CUSTOMERS ||--o{ FCT_ORDERS : "ordered by"
-    DIM_PRODUCTS }o--o{ FCT_ORDERS : "appears in"
+<details>
+<summary>dbt lineage</summary>
 
-    FCT_ORDERS {
-        string order_id PK
-        string customer_id FK
-        string customer_state
-        string order_status
-        timestamp purchased_at
-        timestamp delivered_to_customer_at
-        int delivery_days
-        int delivery_delay_days
-        int item_count
-        double total_item_price
-        double total_freight_value
-        double total_payment_value
-        int max_installments
-        int review_score
-    }
-    DIM_CUSTOMERS {
-        string customer_id PK
-        string customer_unique_id
-        string customer_zip_code_prefix
-        string customer_city
-        string customer_state
-    }
-    DIM_PRODUCTS {
-        string product_id PK
-        string product_category_name
-        string product_category
-        int product_weight_g
-    }
+![dbt lineage](docs/img/lineage.png)
+
+</details>
+
+Every column is described in the **[data dictionary](docs/data_dictionary.md)**. Diagram sources live in `docs/diagrams/*.mmd`; regenerate the images with:
+
+```bash
+npx -y @mermaid-js/mermaid-cli@11.4.2 -i docs/diagrams/er_marts.mmd -o docs/img/er_marts.png -b white -s 2
 ```
 
 ## 🛠️ Tech Stack
 
-- **Orchestration:** Apache Airflow 3.2.1 on [Astronomer](https://www.astronomer.io/) (Astro Runtime)
+- **Orchestration:** Apache Airflow 3.3.2 on [Astronomer](https://www.astronomer.io/) (Astro Runtime)
 - **dbt orchestration:** Astronomer Cosmos (renders every dbt model as Airflow tasks)
-- **Transformation:** dbt 1.11 (`dbt-duckdb`)
+- **Transformation:** dbt 1.12 (`dbt-duckdb` 1.11)
 - **Warehouse:** DuckDB (local) · BigQuery (planned)
 - **Ingestion:** pandas + PyArrow (CSV → Parquet, snappy)
 - **Package manager:** [uv](https://docs.astral.sh/uv/)
+- **Quality:** pytest (DAG integrity + ingestion unit tests), ruff, dbt tests
 - **Python:** 3.13
 
 ## 📂 Project Structure
@@ -199,8 +101,13 @@ ecommerce-data-project/
 ├── notebooks/
 │   └── data_validation.ipynb          # data-quality checks against Parquet + marts
 ├── data/                              # raw CSVs + generated parquet/ (gitignored)
-├── docs/img/                          # diagrams (data model)
-└── tests/dags/                        # DAG integrity tests
+├── docs/
+│   ├── data_dictionary.md             # every table and column
+│   ├── diagrams/                      # Mermaid sources
+│   └── img/                           # rendered diagrams (PNG + SVG)
+└── tests/
+    ├── dags/                          # DAG integrity tests
+    └── include/                       # ingestion unit tests
 ```
 
 ## 🚀 Getting Started
@@ -209,6 +116,8 @@ ecommerce-data-project/
 - [uv](https://docs.astral.sh/uv/getting-started/installation/)
 - [Astro CLI](https://www.astronomer.io/docs/astro/cli/install-cli) (to run Airflow locally, Docker-based)
 
+> **Windows:** Airflow and Cosmos only install on Linux, so on native Windows `uv sync` installs everything except them (ingestion, dbt and the notebook work; DAG tests are skipped). For the full environment use WSL, or Docker via `astro dev start`.
+
 ### 1. Install dependencies
 ```bash
 uv sync
@@ -216,8 +125,9 @@ uv sync
 
 ### 2. Configure environment
 ```bash
-cp .env.example .env   # then fill in the values (BigQuery, dbt paths, ...)
+cp .env.example .env   # dbt target, BigQuery settings (future)
 ```
+Keep paths out of `.env`: dbt ≥ 1.12 auto-loads it. Container paths are set in the `Dockerfile`; local runs default to `data/parquet` and `ecomerce/` (override with `OLIST_PARQUET_DIR` / `DUCKDB_DIR`).
 
 ### 3. Ingest the raw data (CSV → Parquet)
 ```bash
@@ -231,8 +141,10 @@ uv run dbt run  --profiles-dir .
 uv run dbt test --profiles-dir .
 ```
 
-### 5. Validate
+### 5. Test and validate
 ```bash
+uv run pytest            # DAG integrity + ingestion unit tests
+uv run ruff check .
 uv run jupyter notebook notebooks/data_validation.ipynb
 ```
 
@@ -259,9 +171,9 @@ All DAGs are validated by `tests/dags/` (≥ 2 retries and valid tags required).
 |-------|------|-----------------|---------|
 | **Staging** | `ecomerce/models/staging/` | table | Typed/renamed columns over the raw Parquet sources |
 | **Intermediate** | `ecomerce/models/intermediate/` | ephemeral | Per-order aggregations (payments, items, reviews) |
-| **Marts** | `ecomerce/models/marts/` | table | Business-ready models: `fct_orders`, `dim_customers`, `dim_products` |
+| **Marts** | `ecomerce/models/marts/` | table | Business-ready models: `fct_orders`, `dim_customers`, `dim_products`, `dim_sellers` |
 
-dbt reads the Parquet files directly through DuckDB `external_location` sources (`ecomerce/models/staging/source.yml`).
+dbt reads the Parquet files directly through DuckDB `external_location` sources (`ecomerce/models/staging/source.yml`). Column descriptions are in each `schema.yml`, so `dbt docs generate && dbt docs serve` documents the whole project.
 
 ## 🗺️ Roadmap
 
@@ -269,6 +181,7 @@ dbt reads the Parquet files directly through DuckDB `external_location` sources 
 - [x] dbt `staging → intermediate → marts` on DuckDB
 - [x] Airflow DAGs (ingest + Cosmos transform)
 - [x] Data-quality validation notebook
+- [x] Data model diagrams and data dictionary
 - [ ] Enable BigQuery as the warehouse
 - [ ] Looker Studio dashboard
 - [ ] Power BI dashboard
